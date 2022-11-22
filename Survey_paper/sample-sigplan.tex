@@ -1,0 +1,197 @@
+
+\documentclass[sigplan,screen]{acmart}
+\settopmatter{printacmref=false}
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
+
+\begin{document}
+
+%%
+%% The "title" command has an optional parameter,
+%% allowing the author to define a "short title" to be used in page headers.
+\title{A Survey on Smart Contract Automated Repair Methods}
+
+%%
+%% The "author" command and its associated commands are used to define
+%% the authors and their affiliations.
+%% Of note is the shared affiliation of the first two authors, and the
+%% "authornote" and "authornotemark" commands
+%% used to denote shared contribution to the research.
+\author{Ru Ji}
+\affiliation{%
+  \institution{r2ji@uwaterloo.ca}
+}
+\email{20987675}
+
+
+\begin{abstract}
+Ethereum is one of the most popular topics in the blockchain community these days. The main reason is that it provides users with the availability to develop their own smart contracts. However, vulnerability comes along with the wild use and convenience provided by smart contracts. Vulnerabilities in smart contracts can lead to huge financial damages. At the same time, once the smart contracts are deployed on the Ethereum blockchain, they will be immutable, which means if the contract is flawed, there is hardly any method to compensate for that. Therefore, it is important to make sure any potential vulnerabilities are properly discovered and repaired before deployment. This paper firstly shows current research focusing on automated smart contract repair, then I will discuss the challenges and current problems, along with potential future on this topic.
+\end{abstract}
+
+\maketitle
+\section{Introduction}
+With the development of blockchain technology, cryptocurrency has seen explosive growth in recent years. By 12th Feb, 2022, there are 17,514 cryptocurrencies for trade from coinmarketcap \cite{coinmarketcap}.
+
+
+As the first generation cryptocurrency, bitcoin \cite{nakamoto2008bitcoin} demonstrated the possibility to create a value-transfer system that is available across the world and free to use. However, bitcoin has its limitations. Due to the performance and scalability issues, bitcoin can not support complex applications. Bitcoin is mostly used as a cryptocurrency instead of a blockchain platform. Ethereum \cite{buterin2014next} was therefore proposed to provide the user with the possibility to create DApps (Decentralized Applications) by developing smart contracts. Ethereum has been regarded as the most creative blockchain technique after Bitcoin.
+
+However, the availability and the financial behavior in Ethereum also attract the attention of attackers. There have been continuous attacks on smart contracts ever since Ethereum was launched, According to the study performed by Perez and Livshits, they surveyed 21,270 vulnerable contracts reported and found out that 504 of them have been subjected to exploits \cite{perez2019smart}. 
+ For example, the DAO (decentralized autonomous organization) was stolen 60\$ million of ether due to the reentrancy vulnerability \cite{liu2018reguard} in the smart contracts in 2016, leading the Ethereum community with the only choice of a hard fork. 
+
+With that said, in order to avoid financial loss, there is a need to make sure that the smart contracts are free of vulnerabilities before deployment, and there is also a need to design a pattern which can upgrade a deployed vulnerable contract. The most common way to deal with this problem is vulnerability detection tool, with source code or bytecode of a smart contract as input. However, even though the location of vulnerability and the potential exploit path are clearly pointed out, human coders might still not be able to correctly rectify the flawed contracts, or they can not do this work as accurate and efficient as an automated tool, and this is reason the design of automated smart contract repair come to sight. 
+
+There are several automated smart contract repair tools proposed, SCRepair \cite{yu2020smart}, SMARTSHIELD \cite{zhang2020smartshield}, EVMPatch \cite{rodler2021evmpatch}. These tools share a pipeline pattern of detecting vulnerabilities first, then they implement different automated patching techniques to patch the vulnerabilities found by the detection tool, then use a test suite to test the performance of the tool. However, in this pipeline, there are still some open problems, and several steps can still get some improvements in the future research to improve the overall accuracy and scalability.
+\section{Background}
+
+\subsection{Smart Contract and Bytecode}
+
+A smart contract is a collection of code and data that reside in Contract Account. They are typically written in high level languages such as Solidity\cite{solidity}. They are used to implement arbitrary rules as well as guarantee to produce the same result for decentralized parties. Anyone can execute smart contract code by making a transaction request. Bytecode is the format in which smart contracts exist and execute, it is compiled from source code.
+The bytecode of smart contract is composed of three parts: \textit{creation code}, \textit{runtime code} and \textit{swarm code}.
+
+\subsection{Ethereum Account and Transaction}
+
+Account is the most basic unit to identify an entity in the network. There are two types of accounts: \textit{External Owned Account} and \textit{Contract Account}. External Owned Account(EOA) works as the user in the Ethereum network. EOA has several abilities: it can transfer tokens, invoke deployed smart contracts and store received tokens. EOA can also link itself to Contract Account, EOA can deploy a smart contract into a Contract Account. However, the deployment is achieved through a transcation. An account deploys a smart contract by sending a transaction that contains the bytecode of smart contract to address 0x0. After the contract is deployed, all accounts (both contract account and EOA) are able to invoke the smart contract via the contract address.
+
+\subsection{Ethereum Virtual Machine}
+
+Ethereum Virtual Machine (EVM) is a simple stack-based architecture, the function of the EVM stack is to store the results of intermittent execution of bytecode instructions. When the source solidity code is compiled into bytecode, EVM is able to provide a runtime environment for bytecode, at the same time, EVM manages the execution of transactions and the transit of blockchain state.
+
+EVM specifies how the system state is altered given a series of bytecode instructions and a small tuple of environmental data, the detailed information can be checked from the yellow paper\cite{wood2014ethereum}.
+
+\subsection{Gas Usage}
+
+Gas is a mechanism used in Ethereum to constrain external calls to smart contracts. It is the unit that measures the amount of computational effort required to execute specific operations on the Ethereum network. From the bytecode level, each instruction equals to a certain amount of gas, all the instructions calculated together, multiplied with the gas price, this is the simplified way to understand how to get the gas for the execution of a smart contract.
+
+\subsection{Symbolic Execution in Ethereum}
+
+Symbolic execution is a technique that uses constraint solving to explore a program's state space. Symbolic execution on EVM have several differences than traditional execution \cite{mossberg2019manticore} . For example, the previously mentioned gas usage is a new mechanism in Ethereum blockchain, Ethereum also implements different memory and persistent storage models. Besides, transactions in Ethereum consist of a value and a data buffer, the data buffer contains information about the behaviors of this particular contract in execution. Symbolic execution of smart contracts involves symbolic transactions. Symbolic transactions are applied to all Ready states.
+
+There have been several open-sourced symbolic execution tools in Ethereum, Manticore \cite{mossberg2019manticore},KEVM\cite{hildenbrandt2017kevm}, VerX\cite{permenev2020verx}, Mythril\cite{mythril}, these tools have also been used in commercial vulnerability detections. 
+
+\section{Problem Definition}
+
+The goal of automated smart contract repair is to generate correct, high-quality, gas-optimized fixes for the vulnerable smart contract. The whole repair process can be described in the following formula:
+$$
+(C, U, T, L) => C'
+$$
+
+\textbf{Notation}
+In this formula, C represents a vulnerable smart contract, U represents a set of detected vulnerabilities, T represents a test suite, L is the maximum gas usage. C' is the output of the fixed repair. 
+
+\textbf{Definition} The successful vulnerability repair is defined as:
+
+C' comes from C, but with all the vulnerabilities in U fixed, Passing all tests in T, and the Maximum gas usage of feasible execution paths <= L.
+
+The smart contract repair problem introduces extra computational complexity, which is mainly due to the fact that smart contracts are typically running on the top of the blockchain systems that impose certain constraints on the total computational resources used by the contract. The rectified contract should also make sure that no further vulnerabilities are brought by the rectification process.
+\section{Motivation}
+Rodler et al conducted a developer study \cite{rodler2021evmpatch}. In this study, they asked 6 professional developers who consider themselves familiar with blockchain technologies but are not familiar with Solidity to manually patch three vulnerable contracts and patch these contracts using the tool EVMPatch. The result shows that none of the six developers were able to produce a correct upgradable contract, which shows that EVMPatch offers more efficiency, usability, and automation. On repairing smart contracts, there is a need to implement an automated repair tool other than manually repairing.
+
+
+
+Weiqin et al. \cite{zou2019smart} also conducted an empirical study to analyze the current problems with solidity developers, and suggested some directions for developers and researchers.
+
+
+\section{Automated Smart Contract Repair}
+
+There is a general pipeline for automated smart contract repair problems.
+At first, vulnerability detection tools should be implemented to properly locate the vulnerabilities in the smart contracts. After detection, automated repair tools are implemented on these vulnerabilities that have been detected. The repaired contracts will then be passed into the test suite to check the accuracy of the repair tool. In different steps of this pipeline, there are novel techniques proposed by researchers. This chapter will elaborate on these novel techniques.
+
+
+
+\subsection{Vulnerability Detection}
+
+\textbf{Input}
+Vulnerability detection tool analyzes either the contract source code or its compiled EVM bytecode. Most tools target bytecode. The reason is that source rewriting may risk corrupting storage-layout, and make it harder to test with transaction data. However, source code analysis still provides the feasibility of more intuitive human analysis.
+
+ZEUS\cite{kalra2018zeus} takes source solidity code as input, and first generates the abstract syntax tree(AST), then it designs a XACML-styled policy. ZEUS also provides the Solidity to LLVM bitcode translator, which can translate the policy and Solidity code to LLVM bitcode, where it implemented Horn clauses to check that the policy is respected.
+ 
+ \textbf{Output}
+ Most tools will output the vulnerability type and location of vulnerability, such as Mythril\cite{mythril}, MAIAN\cite{nikolic2018finding}, Securify\cite{tsankov2018securify}, Slither\cite{feist2019slither}. Teether\cite{krupp2018teether} is slightly different as it will generate an exploit to the vulnerability.
+
+
+\subsubsection{Fuzzing}
+
+There are also some fuzzing-based vulnerability detection techniques. 
+Choi et al. \cite{choi2021smartian} proposed SMARTIAN to use both static and dynamic Data-flow analysis. Ting et al.\cite{chen2019tokenscope} proposed TokenScope to detect inconsistent behavior of currency tokens with a tool called TokenFuzzer.
+Grieco et al.\cite{grieco2020echidna} proposed Echidna, which supports assertion checking, custom property-checking, and estimation of maximum gas usage.
+Youngseok et al. \cite{yang2021finding} proposed Fluffy, which is a multi-transaction differential fuzzer to find consensus bugs.
+
+Fuzzing can also be conducted from other perspectives. Ashraf et al. \cite{ashraf2020gasfuzzer} proposed GasFuzzer which explores the effects of gas allowance manipulation to expose gas-oriented exception security vulnerabilities. 
+\subsubsection{Symbolic Execution}
+
+There have been several open source Ethereum symbolic execution tools. Most of the vulnerability detection tools implement symbolic execution based techniques.
+
+TEETHER \cite{krupp2018teether} can automatically create and verify exploits for smart contracts, after constructing CFG, TEETHER generates critical paths and uses the SMT-solver Z3 to prune the search space and to compute multi-transactional exploits. MAIAN\cite{nikolic2018finding} symbolic executes the contract with Z3-solver, then after the detection, MAIAN attack the contract with concrete transactions to validate the detection results.
+
+Securify\cite{tsankov2018securify} relies on Datalog. It firstly decompiles the bytecode into a static-single assignment form, then it represents the code as DataLog facts. In the last step, it will interpret the patterns to check whether they are compliant with each other.
+
+MadMax\cite{grech2018madmax} works similarly to Securify, it also implemented Datalog technique, the difference is that it focuses on vulnerabilities related to gas. It is the first tool to detect "unbounded mass operations".
+Securify 2.0 supports an updated version of the smart contract language and more types of vulnerability detection.
+
+Oyente \cite{luu2016making} takes the bytecode of a smart contract and a state of the Ethereum blockchain, then it simulates the EVM and explores different paths of the contract.
+
+There has also been some research on formally verifying Ethereum smart contracts. Hirai et al.\cite{hirai2017defining} use LEM to generate definitions for theorem provers such as Coq. Grishchenko et al.\cite{grishchenko2018semantic} presents a complete small-step semantics of EVM bytecode and formalizes it using the F* proof assistant.
+\subsection{Automatic Repair}
+
+Current research on this topic implemented various different techniques.
+Xiao et al. \cite{yu2020smart} proposed SCRepair which searches among mutations of the buggy contract, and it also considers the gas usage of the patch to select the most gas-friendly patch available. Zhang et al. \cite{zhang2020smartshield} proposed a template based repair method which aims at three typical bugs, and SmartShield is at the same time gas-friendly, it only introduced 0.2\% gas increment for each repair. EVMPatch \cite{rodler2021evmpatch} took one step further than SmartShield as it is more flexible and it proposed a solution to upgrade the vulnerable contract on the blockchain.
+
+
+\subsubsection{Repaired contracts deployment}
+
+Although once the smart contracts are deployed on the blockchain, it will no longer be able to edit or remove the contracts. There have been several ways to achieve the goal of contract upgrade, each with their own benefits and disadvantages.
+
+\begin{itemize}
+
+\item The first approach is to deploy the patched contract at a new address and migrate the state of the original contract to it. However, state migration is specific to the contract and must be manually implemented by the developers to have access to all the internal states of the old contract, and a procedure in the new contract to accept state transfers.
+
+\item To avoid state migration, developers can use a separate contract as a data storage contract(eternal storage pattern). The disadvantage of  this approach is that this adds additional gas overhead, which means that every time the logic contract needs to access data, it must perform a costly external call into the data storage contract.
+
+\item  \textbf{Proxy contract} The most favorable version of proxy-pattern is delegatedcall-proxy pattern. Once smart contract is split into two different contracts, the first one is an immutable proxy contract, which holds all funds and all internal states, and the business logic is in another contract, this one is completely stateless and implements purely the business logic. User enters the system through this proxy contract. The proxy contract will forward all function calls to the logic contract using the \texttt{DELEGATECALL} instruction, which gives the logic contract access to all internal states and funds stored in the proxy contract. When contract need to be upgraded, the upgraded contract is deployed on the blockchain, then its address is updated in the proxy contract. Using this approach saves the need to migrate data, and at the same time the upgrading process is transparent to users.
+
+\end{itemize}
+\subsubsection{Template-based Repair}
+
+SMARTSHIELD implemented a template-based repair method. It firstly scans real-world smart contracts with three existing detection tools: Securify, Osiris, Mythril. The repair process consists of two phases, semantic extraction and contract rectification. In the first phase, SMARTSHIELD extracts bytecode-level semantic information from the unrectified EVM bytecode, then given the extracted bytecode-level semantic information, SMARTSHIELD fixes insecure control flow and data operations. The novel idea in SMARTSHIELD is that it proposed control flow transformation and DataGuard insertion. The former can be used to solve the bytecode inconsistency problem after rectification, while the latter one is used to prevent further vulnerabilities.
+
+\subsubsection{Gas Usage}
+
+Several tools have took gas optimization into consideration when they are implemented\cite{yu2020smart}\cite{zhang2020smartshield}. Integrating gas-awareness into the smart contracts repair technique is crucial. Because if the gas consumption after repairment is not monitored, unnecessary gas consumption can be excessive and lead to either financial loss or out-of-gas exceptions. No one wants a super secure contract but the cost is extremely high that one transaction will cost thousands of ETHs, and most of the cost is also totally unnecessary. 
+
+SMARTSHIELD achieved gas optimization by appending the secure functions to the end of the generated EVM bytecode, then replacing the insecure operation with a secure function invocation .The result shows that for each rectified contract, SMARTSHIELD inserted 43.6 instructions on average, and the average size increment of each contract is around 1.0\%.
+
+SCRepair chooses the mutant with lower gas usage to achieve gas optimization.
+
+\section{Open Problems and Potential Future}
+\subsection{Non-Template Based Repair}
+
+Most of the automated repair tools mentioned in this paper implemented a template-based method. Even those methods which do not directly implement a template based method, the implicit logic is also template based. For example, The detection rule behind TEETHER is finding out contracts that lead to a payment to an arbitrary address. In reality, new types of vulnerability and attacks continue to appear and it takes effort to create a template for every newly discovered vulnerabilities. Current research also mostly only focuses on several famous vulnerabilities.
+
+Although there are few deficiencies with template based repair methods, it is not easy to jump out of template based methods to design an approach which can be very general towards vulnerabilities.
+However, there exists a balance between template based and non-template based repair methods. In the future tool design, several things should be noticed. Firstly, creating new templates should be made easier. When new type of attacks or vulnerabilities are discovered, implementing them into the repair tool should be made easy. Secondly, the vulnerability detector can be extended so that it can explore more vulnerabilities which have not yet been discovered publicly.
+
+\subsection{Dynamic Detector}
+
+Currently, the automated repair tools mostly use static vulnerability detection tools. Most of them implement the same method: using symbolic execution and adding constraints on the behaviors which come from the templates. While static analysis itself is not the perfect approach, for example, some static analysis tools can result in false positive reports. Therefore, it is of importance to have some other testing method on top of it to make the result more accurate, and dynamic detector is one of them. There are some open source dynamic testing frameworks in Ethereum, such as truffle\cite{truffle}. Besides, the aforementioned fuzzing approaches can be implemented as dynamic validation.
+
+\subsection{Apply More Convincing Test Suite}
+
+There are some deficiencies in using history transactions as the test suite. First of all, collecting these transactions is not a easy task, throughout these years Ethereum blockchain has become huge that it will take excessive time and space to sync the data. Secondly, not all contracts have effective history transactions, some contracts have no history transactions, and there is a possibility that the history transactions are unable to exploit the vulnerability. An idea towards this problem is to use self-constructed test suites which target specifically exploit paths.
+\subsection{Bytecode Rewriting}
+
+The bytecode level contract rectification may change addresses of instructions, for example, unaligned target addresses of instructions \texttt{JUMP}, \texttt{JUMP1} are required to be updated. SMARTSHIELD requires a complete  control-flow graph to update jump targets and data references. EVMPATCH instead implements a trampoline based rewriting strategy which does not need an accurate CFG thus making it easier to scale to larger and more complicated contracts. However, both methods have deficiencies. Trampoline-based approach avoids fixing up any references with the cost of additional jump instructions, therefore extra gas cost. The simple approach SMARTSHIELD presents is limited to the templates they described, even within this approach, when the moved instructions depend on the execution result of \texttt{CALL}, there will be dependency conflict which SMARTSHIELD is unable to solve.
+
+\subsection{Other Chains}
+
+This survey focuses on Ethereum, while other contract based chains also face similar problem as in Ethereum. EOSIO blockchain \cite{huang2020characterizing} is famous for its Delegated Proof-of-State. EOSafe \cite{he2021eosafe} is a static analysis framework for vulnerability detection in EOSIO WASM smart contracts. The framework of EOSafe is composed of a practical symbolic execution engine for Wasm, a customized library emulator for EOSIO smart contracts, and four heuristic-driven detectors to identify the four vulnerabilities. There is no research on automatically repairing EOSIO contracts now.
+
+\section{Conclusion}
+
+Current researches on automated smart contract repair share similar pattern. In the first step a detection tool is implemented to locate vulnerable point, then various different approaches are used to automatically repair the vulnerabilities. Besides correctly rectifying the vulnerable point, there are also several things to consider. Firstly, after the smart contract is modified, the tool should ensure that the rectification process will not cause other unexpected vulnerabilities. The gas usage should also be monitored so that the rectified code will not bring unaffordable gas increment.Though these tools discussed in this survey paper show excellent result, they still have their deficiencies and limitations. Some steps within the pipeline of automated repair tool can expect further research and improvements. For example, dynamic detector can be added after static analysis to deal withe false positive reports from static analysis. Regarding the evaluation of the repair tool, more convincing test suite can be introduced. Bytecode level repair approaches still have some deficiencies with bytecode rewriting, dependency conflict might occur. Further reasearch can focus more on how to properly solve this deficiency.
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{sample-base}
+\end{document}
+\endinput
+%%
+%% End of file `sample-sigplan.tex'.
